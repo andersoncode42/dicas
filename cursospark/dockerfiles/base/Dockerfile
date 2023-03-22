@@ -29,8 +29,8 @@ RUN    apk add --update --no-cache \
     && echo "${USUARIO}:${SENHA}" | chpasswd     \
     # Adicione o usuário ao grupo de superusuários(sudoers)
     && echo "${USUARIO} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-    # Configurando o layout do terminal quando o usuário entra no container
-    && echo 'export PS1="[\d \t \u:\w]$ "' > "$PASTA_USUARIO/.profile"
+    # Configurando o layout do terminal para qualquer usuário que entrar no container
+    && echo 'export PS1="[\d \t \u:\w]$ "' > "/etc/profile"
     #&& echo 'export PS1="\[\033[01;32m\][\u@\h\[\033[01;37m\] \W\[\033[01;32m\]]\$\[\033[00m\]"' > "$PASTA_USUARIO/.profile"
 
 # Configura o diretório de trabalho no container
