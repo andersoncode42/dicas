@@ -16,7 +16,8 @@ ENV PASTA_USUARIO /home/$USUARIO
 
 # Instala os pacotes necessários em sua última versão
 RUN    apk add --update --no-cache \
-               bash       \
+               bash                \
+               bash-completion     \
                curl       \
                sudo       \
                vim        \
@@ -28,8 +29,9 @@ RUN    apk add --update --no-cache \
     && echo "${USUARIO}:${SENHA}" | chpasswd     \
     # Adicione o usuário ao grupo de superusuários(sudoers)
     && echo "${USUARIO} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-    # Para alterar o terminal para exibir o nome do usuário e a pasta
-    && echo "PS1=\"\\u:\\W$ \"" >> ~/.bashrc
+    # Configurando o layout do terminal quando o usuário entra no container
+    && echo 'export PS1="[\d \t \u:\w]$ "' > "$PASTA_USUARIO/.profile"
+    #&& echo 'export PS1="\[\033[01;32m\][\u@\h\[\033[01;37m\] \W\[\033[01;32m\]]\$\[\033[00m\]"' > "$PASTA_USUARIO/.profile"
 
 # Configura o diretório de trabalho no container
 WORKDIR ${PASTA_USUARIO}
@@ -41,7 +43,7 @@ USER ${USUARIO}
 # COPY --chown=${USUARIO} some-file.txt .
 
 # Comando a executar quando iniciar o container
-CMD ["bash"]
+CMD ["bash","-l"]
 
 #-------------------------------------------
 # Exemplo de como usar este dockerfile
@@ -54,4 +56,7 @@ CMD ["bash"]
 # Cria e roda um container baseado nesta imagem
 # docker run --name cursospark-base -it "andersoncode42/cursospark:base"
 #
+# Para publicar sua imagem no dockerhub use:
+# docker login
+# docker push "andersoncode42/cursospark:base"
 
