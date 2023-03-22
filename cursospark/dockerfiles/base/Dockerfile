@@ -7,9 +7,10 @@
 # Use alpine as base image
 FROM alpine:latest
 
-# Install bash, sudo and openssh
-RUN    apk add --no-cache \
+# Instala os pacotes necessários
+RUN    apk add --update --no-cache \
                bash       \
+               curl       \
                sudo       \
                openssh    \
                vim        \
@@ -37,9 +38,10 @@ CMD ["/usr/sbin/sshd", "-D"]
 # Constrói localmente a imagem na sua máquina com a tag "cursospark-base"
 # docker build -t cursospark-base .
 #
-# Cria e roda um container baseado nesta imagem 
+# Cria e roda um container baseado nesta imagem
 # e amarra a porta 2222 do seu computador com a porta 22 do container
 # docker run --name cursospark-base -d -p 2222:22 cursospark-base
 #
 # Acessa remotamente o container
-# ssh -o "StrictHostKeyChecking=no" spark@localhost -p 2222
+# ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:2222"
+# ssh spark@localhost -p 2222
