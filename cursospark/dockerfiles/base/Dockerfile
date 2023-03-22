@@ -4,31 +4,44 @@
 #
 # IMPORTANTE: Esta imagem NÃO tem qualquer segurança
 #             NÂO use em produção
-# Use alpine as base image
+
 FROM alpine:latest
 
-# Instala os pacotes necessários
+
+# Variáveis de ambiente que usaremos para configurar os próximos passos
+ENV USUARIO spark
+ENV SENHA spark
+ENV PASTA_USUARIO /home/$USUARIO
+
+
+# Instala os pacotes necessários em sua última versão
 RUN    apk add --update --no-cache \
                bash       \
                curl       \
                sudo       \
-               openssh    \
                vim        \
                nano       \
-    # Create a user called spark with password spark and add it to sudoers
-    && adduser -D spark              \
-    && echo "spark:spark" | chpasswd \
-    && echo "spark ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-    # Generate host keys for sshd
-    && ssh-keygen -A \
-    # Set PermitRootLogin to yes
-    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+               openjdk11  \
+    # Cria o usuário sem senha com sua respectivapasta home
+    && adduser -D -h ${PASTA_USUARIO} ${USUARIO} \
+    # # Preenche a senha do usuário
+    && echo "${USUARIO}:${SENHA}" | chpasswd     \
+    # Adicione o usuário ao grupo de superusuários(sudoers)
+    && echo "${USUARIO} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+    # Para alterar o terminal para exibir o nome do usuário e a pasta
+    && echo "PS1=\"\\u:\\W$ \"" >> ~/.bashrc
 
-# Expose port 22 for ssh
-EXPOSE 22
+# Configura o diretório de trabalho no container
+WORKDIR ${PASTA_USUARIO}
 
-# Start sshd in the foreground
-CMD ["/usr/sbin/sshd", "-D"]
+# Dizer ao container que todos os futuros comandos devem ser executados como esse usuário
+USER ${USUARIO}
+
+# Copiar algum arquivo para a pasta inicial do usuário spark (opcional)
+# COPY --chown=${USUARIO} some-file.txt .
+
+# Comando a executar quando iniciar o container
+CMD ["bash"]
 
 #-------------------------------------------
 # Exemplo de como usar este dockerfile
@@ -36,12 +49,9 @@ CMD ["/usr/sbin/sshd", "-D"]
 # Entre na mesma pasta do arquivo "Dockerfile" e execute os comandos abaixo:
 #
 # Constrói localmente a imagem na sua máquina com a tag "cursospark-base"
-# docker build -t cursospark-base .
+# docker build -t "andersoncode42/cursospark:base" .
 #
 # Cria e roda um container baseado nesta imagem
-# e amarra a porta 2222 do seu computador com a porta 22 do container
-# docker run --name cursospark-base -d -p 2222:22 cursospark-base
+# docker run --name cursospark-base -it "andersoncode42/cursospark:base"
 #
-# Acessa remotamente o container
-# ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:2222"
-# ssh spark@localhost -p 2222
+
