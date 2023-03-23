@@ -18,10 +18,17 @@ ENV PASTA_USUARIO /home/$USUARIO
 RUN    apk add --update --no-cache \
                bash                \
                bash-completion     \
+               # Gerenciadores Download
+               aria2      \
                curl       \
+               wget       \
                sudo       \
+               # Compactador
+               tar        \
+               # Editores de texto
                vim        \
                nano       \
+               # Java
                openjdk11  \
     # Cria o usuário sem senha com sua respectivapasta home
     && adduser -D -h ${PASTA_USUARIO} ${USUARIO} \
