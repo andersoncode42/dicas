@@ -1,0 +1,240 @@
+
+CURSO DE SPARK – DISTRIBUIÇÃO E PROCESSAMENTO DE DADOS
+
+PROF. CARLOS M. D. VIEGAS
+
+
+Roteiro de implantação do Apache Hadoop 3.x (multinode com YARN)
+
+
+Requisitos
+    • Distribuição GNU/Linux;
+    • Máquina Java (versão 11);
+    • Aplicação SSH (cliente e servidor).
+
+Este roteiro apresentará o modo de execução totalmente distribuído (multinode) com o Yarn.
+Para esta prática, inicialmente, iremos trabalhar com 3 nós, sendo um mestre e dois escravos.
+
+
+Instalação e Configuração
+Observação: Seguir os passos do roteiro executando os comandos no nó mestre (node-master).
+
+    1. No sistema GNU/Linux, baixar o Apache Hadoop na versão 3.3.4 a partir do seguinte endereço:
+https://hadoop.apache.org/releases.html
+
+    2. Extrair o arquivo por meio do comando abaixo em um emulador de terminal:
+tar –xzvf hadoop-3.3.4.tar.gz -C ~
+
+    3. Configurar o ambiente Hadoop para que reconheça o local de instalação da máquina Java:
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh
+(linha 54)
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64/
+ (o local da instalação da máquina Java pode variar conforme o sistema operacional e a versão Java)
+
+    4. Para facilitar a execução dos comandos do Hadoop no sistema, sem ter que digitar sempre o local dos executáveis, podemos proceder com a configuração das variáveis de ambiente, conforme abaixo:
+Arquivo: ~/.bashrc 
+(ao final do arquivo acrescentar)
+export HADOOP_HOME="/home/spark/hadoop-3.3.4"
+export HADOOP_COMMON_HOME="${HADOOP_HOME}"
+export HADOOP_HDFS_HOME="${HADOOP_HOME}"
+export HADOOP_MAPRED_HOME="${HADOOP_HOME}"
+export HADOOP_YARN_HOME="${HADOOP_HOME}"
+export HADOOP_CONF_DIR="${HADOOP_HOME}/etc/hadoop"
+export HADOOP_COMMON_LIB_NATIVE_DIR="${HADOOP_HOME}/lib/native"
+export HADOOP_OPTS="$HADOOP_OPTS -XX:-PrintWarnings -Djava.library.path=${HADOOP_COMMON_LIB_NATIVE_DIR}"
+export LD_LIBRARY_PATH="${HADOOP_COMMON_LIB_NATIVE_DIR}"
+export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/"
+export HDFS_NAMENODE_USER="spark"
+export HDFS_DATANODE_USER="${HDFS_NAMENODE_USER}"
+export HDFS_SECONDARYNAMENODE_USER="${HDFS_NAMENODE_USER}"
+export YARN_RESOURCEMANAGER_USER="${HDFS_NAMENODE_USER}"
+export YARN_NODEMANAGER_USER="${HDFS_NAMENODE_USER}"
+export PATH="$PATH:${HADOOP_HOME}/sbin:${HADOOP_HOME}/bin:${JAVA_HOME}/bin"
+(o local da variável HADOOP_HOME pode variar conforme o nome do usuário do sistema)
+
+    5. É recomendado especificar algumas propriedades adicionais para que o HADOOP não apresente warnings sobre bibliotecas não nativas do JAVA:
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh
+(linha 90)
+export HADOOP_OPTS="$HADOOP_OPTS -XX:-PrintWarnings -Djava.library.path=${HADOOP_COMMON_LIB_NATIVE_DIR}"
+
+    6. No nó que será o mestre, deve-se configurar o hostname em que o NameNode será executado. Além disso, definimos o usuário padrão como sendo spark para que seja possível utilizar a interface web com as devidas permissões. A porta 9000 é padrão do Hadoop.
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/core-site.xml
+<configuration>
+<property>
+	<name>fs.default.name</name>
+	<value>hdfs://node-master:9000</value>
+</property>
+<property>
+	<name>hadoop.http.staticuser.user</name>
+	<value>spark</value>
+</property>
+</configuration>
+
+    7. Em seguida, configurar o HDFS para indicar os diretórios em que o NameNode e os DataNodes armazenarão os dados. Além disso, o parâmetro dfs.replication indica a quantidade de nós que terão os dados replicados. Este valor nunca deve exceder a quantidade de nós escravos. 
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/hdfs-site.xml
+<configuration>
+<property>
+	<name>dfs.namenode.name.dir</name>
+	<value>/home/spark/data/nameNode</value>
+</property>
+<property>
+	<name>dfs.datanode.data.dir</name>
+	<value>/home/spark/data/dataNode</value>
+</property>
+<property>
+	<name>dfs.replication</name>
+	<value>3</value>
+</property>
+</configuration>
+O último parâmetro (dfs.replication) indica a quantidade de nós que terão os dados replicados. Este valor nunca deve exceder a quantidade de nós escravos. 
+
+    8. O Yarn será o escalonador de tarefas padrão, atuando no lugar do MapReduce. Para esta finalidade, é necessário configurá-lo e especificar a quantidade de memória RAM a ser alocada para cada tarefa. Além disso, é necessário definir as variáveis do ambiente do MapReduce para que as classes (em Java) possam ser localizadas.
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/mapred-site.xml
+<configuration>
+<property>
+	<name>mapreduce.framework.name</name>
+	<value>yarn</value>
+</property>
+<property>
+	<name>mapreduce.application.classpath</name>
+	<value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*, $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
+</property>
+<property>
+	<name>yarn.app.mapreduce.am.env</name>
+	<value>HADOOP_MAPRED_HOME=${HADOOP_HOME}</value>
+</property>
+<property>
+	<name>mapreduce.map.env</name>
+	<value>HADOOP_MAPRED_HOME=${HADOOP_HOME}</value>
+</property>
+<property>
+	<name>mapreduce.reduce.env</name>
+	<value>HADOOP_MAPRED_HOME=${HADOOP_HOME}</value>
+</property>
+<property>
+	<name>yarn.app.mapreduce.am.resource.mb</name>
+	<value>512</value>
+</property>
+<property>
+	<name>mapreduce.map.memory.mb</name>
+	<value>256</value>
+</property>
+<property>
+	<name>mapreduce.reduce.memory.mb</name>
+	<value>256</value>
+</property>
+</configuration>
+Os três últimos parâmetros definem a quantidade de memória RAM alocada para cada tarefa. No total são 512MB de RAM, sendo 256MB para o mapeamento e 256MB para a redução.
+
+    9. Configurar os parâmetros do Yarn, tais como quantidade de memória alocada para o escalonador, qual nó irá executar o ResourceManager e quais as portas de serviço, variáveis ambiente, entre outros.
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/yarn-site.xml
+<configuration>
+<property>
+	<name>yarn.resourcemanager.hostname</name>
+	<value>node-master</value>
+</property>
+<property>
+	<name>yarn.nodemanager.aux-services</name>
+	<value>mapreduce_shuffle</value>
+</property>
+<property>
+	<name>yarn.nodemanager.resource.memory-mb</name>
+	<value>1536</value>
+</property>
+<property>
+	<name>yarn.scheduler.maximum-allocation-mb</name>
+	<value>1536</value>
+</property>
+<property>
+	<name>yarn.scheduler.minimum-allocation-mb</name>
+	<value>128</value>
+</property>
+<property>
+	<name>yarn.nodemanager.vmem-check-enabled</name>
+	<value>false</value>
+</property>
+<property>
+	<name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+	<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+</property>
+<property>
+	<name>yarn.scheduler.capacity.maximum-am-resource-percent</name>
+	<value>0.95</value>
+</property>
+<property>
+	<name>yarn.application.classpath</name>
+	<value>$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_CONF_DIR/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*</value>
+</property>
+</configuration>
+
+    10. Definir quem são os nós que irão executar as tarefas, editando o arquivo workers.
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/workers
+node-master
+slave1
+slave2
+(Remover o arquivo slaves, caso exista)
+(É importante lembrar que o hostname dos nós deve ser o mesmo conforme a listagem no quadro acima)
+    11. Configurar o arquivo de hosts para que os nós possam ser reconhecidos pelo nome (em vez de IP).
+Arquivo: /etc/hosts
+192.168.0.2	node-master
+192.168.0.3	slave1
+192.168.0.4	slave2
+	(Esta configuração deve ser feita em cada um dos nós)
+
+    12. Neste momento já temos o Apache Hadoop configurado no nó mestre (node-master). Entretanto, é necessário copiar a pasta de instalação do Hadoop para cada um dos nós escravos. Cada escravo deve ser configurado para que possua o seu hostname conforme a tabela do item 11 acima. Isto é possível editando o arquivo /etc/hostname. Além disso, deve ser definido/atribuído o IP também conforme o item 11 acima.
+
+    13. Apenas no node-master: gerar e distribuir as chaves de autenticação para o usuário de sistema spark.
+    a. Para gerar as chaves (com 4096 bits)
+ssh-keygen -b 4096
+
+    b. Inserir na lista de chaves autorizadas
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+    c. Copiar para cada um dos nós escravos
+ssh-copy-id -i ~/.ssh/id_rsa.pub spark@slave1
+ssh-copy-id -i ~/.ssh/id_rsa.pub spark@slave2
+(Verificar se o node-master consegue realizar uma conexão via ssh (sem solicitar uma senha) para cada um dos escravos, por exemplo: ssh slave1). Em caso de ainda necessitar digitar a senha, cancele o comando e digite no terminal: ssh-add
+
+    14. Apenas no node-master: se tudo estiver correto devemos proceder à preparação do sistema de arquivos HDFS:
+hdfs namenode –format
+
+    15. A partir deste momento, o sistema está pronto para ser executado. Será executado o HDFS e em seguida o Yarn (em um só comando).
+start-dfs.sh && start-yarn.sh
+(este comando automaticamente iniciará os processos nos escravos)
+(deve-se aguardar em torno de 30 a 60 segundos para que os nós formem o cluster)
+
+    16. Para verificar a formação do cluster no node-master:
+Via terminal: hdfs dfsadmin -report
+Ou 
+Via web: http://node-master:9870 
+(verificar se existem 3 Live Nodes)
+
+
+Lista com a referência de todos os comandos hdfs:
+https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html
+
+    17. Para verificar a execução do Yarn no node-master:
+Via terminal: yarn node -list
+Ou 
+Via web: http://node-master:8088
+(verificar se existem 3 nós ativos)
+
+Lista com a referência de todos os comandos yarn:
+https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YarnCommands.html
+
+    18. Uma vez que o cluster está operacional, vamos criar as pastas e copiar arquivos para o HDFS:
+        a. Vamos considerar o arquivo dataset-1.json anteriormente baixado (disponibilizado na plataforma Moodle do CEAJUD e salvo na pasta datasets):
+hdfs dfs -mkdir /user/spark/input
+hdfs dfs -put datasets/*.json input
+
+        b. Vamos agora executar uma tarefa com o Yarn e monitorá-la pela interface web. Neste exemplo, uma expressão regular foi utilizada para determinar um padrão desejado. Este comando faz a busca desse padrão, conta as ocorrências do mesmo e grava em um arquivo de saída na pasta output:
+yarn jar ${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-examples-*.jar grep input output 'doc[a-z.]+'
+(esta é a mesma tarefa de procurar palavras que começam com doc*)
+
+    19. É possível recorrer à API Hadoop Streaming para programar as próprias funções de mapeamento e redução em linguagem Python (e outras). Experimente utilizar os arquivos mapper.py e reducer.py desenvolvidos em python como scripts de processamento dos dados no Yarn. Estes scripts realizam a contagem de palavras dado um arquivo de entrada, que deve ser criado para esta finalidade e inserido no HDFS.
+yarn jar ${HADOOP_HOME}/share/hadoop/tools/lib/hadoop-streaming*.jar \
+-files mapper.py,reducer.py \
+-mapper mapper.py -reducer reducer.py \
+-input arquivo.txt \
+-output output

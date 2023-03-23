@@ -1,0 +1,53 @@
+#================
+# INSTALAÇÃO
+#================
+
+# 1. No sistema GNU/Linux, baixar o Apache Hadoop na versão 3.3.4 a partir do seguinte endereço: https://hadoop.apache.org/releases.html
+ wget https://archive.apache.org/dist/hadoop/common/current/hadoop-3.3.4.tar.gz
+
+# 2. Extrair o arquivo por meio do comando abaixo em um emulador de terminal: tar –xzvf hadoop-3.3.4.tar.gz -C ~
+tar -xzvf hadoop-3.3.4.tar.gz -C ~
+
+# 3. Configurar o ambiente Hadoop para que reconheça o local de instalação da máquina Java:
+#  (o local da instalação da máquina Java pode variar conforme o sistema operacional e a versão Java)
+#  No alpine é /usr/lib/jvm/java-11-openjdk/
+# Arquivo: ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh
+# (linha 54)
+# export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64/
+cp -v ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh.bkp
+sed -i 's/# export JAVA_HOME=/export JAVA_HOME=\/usr\/lib\/jvm\/java-11-openjdk\//g' ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh
+
+
+# 4. Para verificar se o Hadoop pode ser executado, digite em um emulador de terminal:
+~/hadoop-3.3.4/bin/hadoop
+
+5. Para facilitar a execução dos comandos do Hadoop no sistema, sem ter que digitar sempre o local dos executáveis, podemos proceder com a configuração das variáveis de ambiente, conforme abaixo:
+Arquivo: ~/.bashrc
+(ao final do arquivo acrescentar)
+export HADOOP_HOME="/home/spark/hadoop-3.3.4" #<--- OBS: Caso automatize, use uma var
+export HADOOP_COMMON_HOME="${HADOOP_HOME}"
+export HADOOP_HDFS_HOME="${HADOOP_HOME}"
+export HADOOP_MAPRED_HOME="${HADOOP_HOME}"
+export HADOOP_YARN_HOME="${HADOOP_HOME}"
+export HADOOP_CONF_DIR="${HADOOP_HOME}/etc/hadoop"
+export HADOOP_COMMON_LIB_NATIVE_DIR="${HADOOP_HOME}/lib/native"
+export HADOOP_OPTS="$HADOOP_OPTS -XX:-PrintWarnings -Djava.library.path=${HADOOP_COMMON_LIB_NATIVE_DIR}"
+export LD_LIBRARY_PATH="${HADOOP_COMMON_LIB_NATIVE_DIR}"
+export JAVA_HOME="/usr/lib/jvm/java-11-openjdk/" #<--- OBS: Caso automatize, use uma var
+export HDFS_NAMENODE_USER="spark" #<--- OBS: Caso automatize, use uma var
+export HDFS_DATANODE_USER="${HDFS_NAMENODE_USER}"
+export HDFS_SECONDARYNAMENODE_USER="${HDFS_NAMENODE_USER}"
+export YARN_RESOURCEMANAGER_USER="${HDFS_NAMENODE_USER}"
+export YARN_NODEMANAGER_USER="${HDFS_NAMENODE_USER}"
+export PATH="$PATH:${HADOOP_HOME}/sbin:${HADOOP_HOME}/bin:${JAVA_HOME}/bin"
+(o local da variável HADOOP_HOME pode variar conforme o nome do usuário do sistema)
+
+cat ~/Semana01/hadoop.vars.txt >> ~/.bashrc
+source ~/.bashrc
+
+# 6. É recomendado especificar algumas propriedades adicionais para que o HADOOP não apresente warnings sobre bibliotecas não nativas do JAVA:
+# Arquivo: ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh
+# (linha 90)
+cp -v ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh.bkp
+echo 'export HADOOP_OPTS="$HADOOP_OPTS -XX:-PrintWarnings -Djava.library.path=${HADOOP_COMMON_LIB_NATIVE_DIR}"' >> ~/hadoop-3.3.4/etc/hadoop/hadoop-env.sh
+

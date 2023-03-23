@@ -1,0 +1,109 @@
+• Modo: Instância única
+
+# 1. Vamos agora fazer um primeiro processamento utilizando o MapReduce em instância única. Como exemplo, vamos utilizar um arquivo de entrada (dataset) em formato .json e realizar a contagem de ocorrências de uma determinada palavra por meio de uma expressão regular. 
+
+# a. Primeiramente vamos criar uma pasta para guardar o dataset e em seguida baixar o arquivo dataset-1.json disponibilizado na plataforma Moodle do CEAJUD: 
+mkdir ~/hadoop-3.3.4/datasets
+cp dataset-1.json ${HADOOP_HOME}/datasets
+
+# b. Em seguida, executamos a tarefa do MapReduce sobre o arquivo de entrada para realizar a contagem de ocorrências de uma determinada palavra. Neste exemplo, uma expressão regular foi utilizada para determinar um padrão desejado. Este comando faz a busca desse padrão, conta as ocorrências do mesmo e grava em um arquivo de saída na pasta output:
+hadoop jar ${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.4.jar grep datasets output 'doc[a-z.]+'
+(É possível experimentar outros arquivos como entrada e também alterar a expressão regular de busca)
+
+c. Para visualizar o resultado:
+cat output/*
+(Importante: Sempre que um novo processo for executado, a pasta output deve ser renomeada no comando ou removida do sistema)
+
+
+• Modo: Pseudo-distribuído
+1. Para realizar o processamento no modo pseudo-distribuído (localmente) com MapReduce são necessárias algumas configurações adicionais no Apache Hadoop.
+
+a. Editar o arquivo core-site.xml e acrescentar:
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/core-site.xml
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://localhost:9000</value>
+    </property>
+</configuration>
+
+b. Editar o arquivo hdfs-site.xml e acrescentar:
+Arquivo: ~/hadoop-3.3.4/etc/hadoop/hdfs-site.xml
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+</configuration>
+
+c. Criar uma chave criptográfica para o servidor ssh permitir o login sem solicitar usuário e senha:
+ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 0600 ~/.ssh/authorized_keys
+
+d. Formatar o sistema de arquivos HDFS no NameNode:
+hdfs namenode -format
+
+e. Iniciar o daemon (processo) do HDFS
+start-dfs.sh
+
+f. Utilizar um navegador para analisar as estatísticas do NameNode:
+http://localhost:9870/
+
+g. Criar os diretórios de usuário no HDFS para executar as tarefas do MapReduce:
+hdfs dfs -mkdir -p /user/<username>
+(Recomenda-se utilizar o mesmo nome de usuário do sistema local)
+
+Exemplo de alguns comandos úteis do HDFS:
+Comando Descrição
+hdfs dfs -ls     Lista um diretório
+hdfs dfs -rm     Remover um arquivo ou pasta do HDFS
+hdfs dfs -mkdir  Cria um diretório
+hdfs dfs -copyFromLocal Copia arquivos do sistema local para o HDFS
+hdfs dfs -put           Copia arquivos do sistema local para o HDFS
+hdfs dfs -copyToLocal   Copia o arquivo do HDFS para o sistema local
+hdfs dfs -get           Copia o arquivo do HDFS para o sistema local
+hdfs dfs -cat           Lê de um arquivo no HDFS
+
+Lista com a referência de todos os comandos hdfs:
+https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html
+
+h. Copiar arquivos de entrada para o HDFS. Considere utilizar o mesmo dataset anteriormente baixado.
+hdfs dfs -mkdir input
+hdfs dfs -put datasets/*.json input
+
+i. Executar a contagem de ocorrências:
+hadoop jar ${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.4.jar grep input output 'doc[a-z.]+'
+
+j. Examine os dados diretamente do HDFS:
+hdfs dfs -cat output/*
+
+k. [OPCIONAL] Para encerrar o daemon do HDFS:
+stop-dfs.sh
+
+Alguns exemplos de programas pré-existentes no arquivo hadoop-mapreduce-examples-3.3.4.jar:
+
+Exemplo Descrição
+aggregatewordcount      Conta as palavras nos arquivos de entrada.
+aggregatewordhist       Computa o histograma das palavras nos arquivos de entrada.
+bbp                     Usa Bailey-Borwein-Plouffe para computar os dígitos exatos de Pi.
+dbcount                 Conta os logs de pageview armazenados em um banco de dados.
+distbbp                 Usa uma fórmula do tipo BBP para computar os bits exatos de Pi.
+grep                    Conta as correspondências de uma regex na entrada.
+join                    Faz a união de conjuntos de dados classificados e particionados igualmente.
+multifilewc             Conta palavras de vários arquivos.
+pentomino               Um programa para organizar peças lado a lado visando a encontrar soluções para problemas de pentomino.
+pi                      Estima Pi usando um método semelhante ao de Monte Carlo.
+randomtextwriter        Grava 10 GB de dados de texto aleatórios por nó.
+randomwriter            Grava 10 GB de dados aleatórios por nó.
+secondarysort           Define uma classificação secundária para a fase de redução.
+sort                    Classifica os dados gravados pelo gravador aleatório.
+sudoku                  Um solucionador de sudoku.
+teragen                 Gera dados para o terasort.
+terasort                Executa o terasort.
+teravalidate            Verificação dos resultados do terasort.
+wordcount               Conta as palavras nos arquivos de entrada.
+wordmean                Conta o tamanho médio das palavras nos arquivos de entrada.
+wordmedian              Conta o tamanho mediano das palavras nos arquivos de entrada.
+wordstandarddeviation   Conta o desvio padrão do tamanho das palavras nos arquivos de entrada.
+Fonte: https://learn.microsoft.com/pt-br/azure/hdinsight/hadoop/apache-hadoop-run-samples-linux
