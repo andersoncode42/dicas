@@ -3,12 +3,16 @@
 # 1. Vamos agora fazer um primeiro processamento utilizando o MapReduce em instância única. Como exemplo, vamos utilizar um arquivo de entrada (dataset) em formato .json e realizar a contagem de ocorrências de uma determinada palavra por meio de uma expressão regular. 
 
 # a. Primeiramente vamos criar uma pasta para guardar o dataset e em seguida baixar o arquivo dataset-1.json disponibilizado na plataforma Moodle do CEAJUD: 
+cd ~
 mkdir ~/hadoop-3.3.4/datasets
-cp dataset-1.json ${HADOOP_HOME}/datasets
+cp -v ~/dataset-1.json ${HADOOP_HOME}/datasets
 
-# b. Em seguida, executamos a tarefa do MapReduce sobre o arquivo de entrada para realizar a contagem de ocorrências de uma determinada palavra. Neste exemplo, uma expressão regular foi utilizada para determinar um padrão desejado. Este comando faz a busca desse padrão, conta as ocorrências do mesmo e grava em um arquivo de saída na pasta output:
-hadoop jar ${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.4.jar grep datasets output 'doc[a-z.]+'
-(É possível experimentar outros arquivos como entrada e também alterar a expressão regular de busca)
+# b. Em seguida, executamos a tarefa do MapReduce sobre o arquivo de entrada para realizar a contagem de ocorrências de uma determinada palavra. Neste exemplo, uma expressão regular foi 
+utilizada para determinar um padrão desejado. Este comando faz a busca desse padrão, conta as ocorrências do mesmo e grava em um arquivo de saída na pasta output:
+
+echo "Exclui a pasta output casa ela já exista"
+rm -Rfv ~/output
+hadoop jar ${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.4.jar grep ${HADOOP_HOME}/datasets  output 'doc[a-z.]+'
 
 c. Para visualizar o resultado:
 cat output/*
